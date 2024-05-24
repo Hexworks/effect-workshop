@@ -1,0 +1,12 @@
+{
+    "extends": "@config/typescript/test.json",
+    "include": ["test"],
+    "references": [{ "path": "tsconfig.src.json" }],
+    "compilerOptions": {
+        "tsBuildInfoFile": ".tsbuildinfo/test.tsbuildinfo",
+        "rootDir": "test"
+    },
+    "paths": {
+        "ta": ["src/*"]
+    }
+}
