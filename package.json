@@ -24,6 +24,7 @@
             "@slidev/theme-default": "0.25.0",
             "@slidev/theme-seriph": "0.25.0",
             "effect": "3.1.4",
+            "express": "4.19.2",
             "luxon": "3.4.4",
             "tslib": "2.6.2",
             "type-fest": "4.16.0",
@@ -33,6 +34,7 @@
     "devDependencies": {
         "@config/typescript": "workspace:*",
         "@slidev/cli": "^0.49.3",
+        "@types/express": "4.17.21",
         "@types/luxon": "3.4.2",
         "@types/node": "*",
         "@typescript-eslint/eslint-plugin": "5.60.1",
@@ -54,6 +56,7 @@
         "node": "20.11.1"
     },
     "volta": {
-        "node": "20.11.1"
+        "node": "20.11.1",
+        "npm": "9.6.7"
     }
 }

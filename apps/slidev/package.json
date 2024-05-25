@@ -2,7 +2,7 @@
     "name": "slidev",
     "type": "module",
     "scripts": {
-        "build": "slidev build --out ../../docs",
+        "build": "rm -Rf ../../docs && mkdir ../../docs && slidev build --out ../../docs",
         "dev": "slidev --open --port 8090",
         "export": "slidev export"
     },

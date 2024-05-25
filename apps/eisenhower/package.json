@@ -14,12 +14,9 @@
         "@shared/utils": "workspace:*",
         "@effect/opentelemetry": "*",
         "@opentelemetry/sdk-trace-base": "*",
-        "cross-fetch": "*",
-        "decimal.js": "*",
         "effect": "*",
-        "indicatorts": "*",
+        "express": "*",
         "luxon": "*",
-        "trading-signals": "*",
         "type-fest": "*"
     }
 }
