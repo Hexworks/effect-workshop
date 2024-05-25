@@ -1,0 +1,8 @@
+#!/bin/bash
+
+P="${P:-3333}"
+
+curl --header "Content-Type: application/json" \
+  --request POST \
+  --data "{\"matrixId\":\"$1\", \"name\":\"$2\", \"dueDate\":\"$3\", \"urgency\": \"$4\", \"importance\": \"$5\"}" \
+  http://localhost:$P/task

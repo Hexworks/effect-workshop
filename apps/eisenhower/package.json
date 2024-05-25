@@ -1,0 +1,29 @@
+{
+    "name": "eisenhower",
+    "private": true,
+    "version": "1.0.0",
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc",
+        "test": "vitest"
+    },
+    "dependencies": {
+        "@shared/utils": "workspace:*",
+        "@effect/opentelemetry": "*",
+        "@opentelemetry/sdk-trace-base": "*",
+        "@electric-sql/pglite": "*",
+        "drizzle-kit": "*",
+        "drizzle-orm": "*",
+        "effect": "*",
+        "express": "*",
+        "pg": "*",
+        "luxon": "*",
+        "type-fest": "*"
+    },
+    "devDependencies": {
+        "@test/utils": "workspace:*"
+    }
+}

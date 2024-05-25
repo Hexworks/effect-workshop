@@ -1,0 +1,18 @@
+{
+    "recommendations": [
+        "aaron-bond.better-comments",
+        "bierner.jsdoc-markdown-highlighting",
+        "christian-kohler.path-intellisense",
+        "dbaeumer.vscode-eslint",
+        "donjayamanne.git-extension-pack",
+        "eamodio.gitlens",
+        "esbenp.prettier-vscode",
+        "fabiospampinato.vscode-terminals",
+        "mikestead.dotenv",
+        "ms-azuretools.vscode-docker",
+        "ms-vscode-remote.remote-containers",
+        "ryanluker.vscode-coverage-gutters",
+        "rluvaton.vscode-vitest",
+        "vue.volar"
+    ]
+}

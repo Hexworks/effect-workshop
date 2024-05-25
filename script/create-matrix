@@ -1,0 +1,8 @@
+#!/bin/bash
+
+P="${P:-3333}"
+
+curl --header "Content-Type: application/json" \
+  --request POST \
+  --data "{\"name\":\"$1\"}" \
+  http://localhost:$P/matrix

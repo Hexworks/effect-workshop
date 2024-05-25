@@ -1,0 +1,9 @@
+{
+    "extends": "@config/typescript/workspace.json",
+    "compilerOptions": {
+        "tsBuildInfoFile": ".tsbuildinfo/src.tsbuildinfo",
+        "rootDir": "src",
+        "outDir": "build/src"
+    },
+    "include": ["src"]
+}

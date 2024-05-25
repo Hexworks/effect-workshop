@@ -1,0 +1,23 @@
+{
+    "extends": "@config/typescript/test.json",
+    "include": [
+        "test"
+    ],
+    "references": [
+        {
+            "path": "tsconfig.src.json"
+        },
+        {
+            "path": "../../packages/test/utils"
+        }
+    ],
+    "compilerOptions": {
+        "tsBuildInfoFile": ".tsbuildinfo/test.tsbuildinfo",
+        "rootDir": "test"
+    },
+    "paths": {
+        "@apps/eisenhower": [
+            "src/*"
+        ]
+    }
+}

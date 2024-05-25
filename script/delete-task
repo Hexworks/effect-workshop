@@ -1,0 +1,5 @@
+#!/bin/bash
+
+P="${P:-3333}"
+
+curl --request DELETE http://localhost:$P/task/$1

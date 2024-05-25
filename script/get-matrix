@@ -1,0 +1,6 @@
+#!/bin/bash
+
+P="${P:-3333}"
+
+curl  --request GET \
+  http://localhost:$P/matrix/$1

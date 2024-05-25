@@ -1,0 +1,20 @@
+{
+    "name": "slidev",
+    "type": "module",
+    "scripts": {
+        "build": "rm -Rf ../../docs && mkdir ../../docs && slidev build --out ../../docs",
+        "dev": "slidev --open --port 8090",
+        "export": "slidev export"
+    },
+    "dependencies": {
+        "@effect/opentelemetry": "*",
+        "@opentelemetry/sdk-trace-base": "*",
+        "@opentelemetry/sdk-metrics": "*",
+        "@opentelemetry/sdk-trace-web": "*",
+        "@opentelemetry/sdk-trace-node": "*",
+        "@slidev/theme-default": "*",
+        "@slidev/theme-seriph": "*",
+        "effect": "*",
+        "vue": "*"
+    }
+}
