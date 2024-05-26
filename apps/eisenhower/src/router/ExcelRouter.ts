@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 type ExportParams = {
+    matrixId: string;
     path: string;
 };
 
@@ -9,8 +10,8 @@ export const make = () => {
 
     router.post(`/`, async (req, res) => {
         // TODO:
+        const { matrixId, path }: ExportParams = req.body;
         console.log("Generating excel export");
-        const { path }: ExportParams = req.body;
         res.status(501);
         res.json({
             path,

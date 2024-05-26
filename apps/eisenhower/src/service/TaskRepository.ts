@@ -1,8 +1,8 @@
 import { Tag, type Effect } from "effect/Effect";
 import type { Task, UnsavedTask } from "../domain";
 
-type EntityNotFound = "EntityNotFound";
 type DatabaseError = "DatabaseError";
+type EntityNotFound = "EntityNotFound";
 
 export class TaskRepository extends Tag("Service/TaskRepository")<
     TaskRepository,

@@ -68,9 +68,10 @@ As a user I want to get task notifications whenever there is a task that's past 
 
 ### Create Excel Export
 
-As a user I want to be able to create an Excel export of the matrices in the app.
-Each matrix should have its own tab in the excel file, and tasks should be represented as rows.
-The excel export is generated asynchronously and the file is written to the path specified by the user.
+As a user I want to be able to create an Excel export of a matrix.
+
+Each task should have its own row in the file, format should be `.csv`.
+The file is written to the path specified by the user.
 
 ## Other Tasks
 

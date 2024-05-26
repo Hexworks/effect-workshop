@@ -294,14 +294,14 @@ export const make = sync(() => {
 ```
 
 Oh, but wait...we need the database connection! Let's see what we can do. Since the repository functions don't have requirements we can create a context element that holds the database connection and
-`yield*` it in the constructor. Create a new context element in the `service` folder named `Db.ts` and move the initialization logic there:
+`yield*` it in the constructor. Create a new context element in the `db` folder named `Db.ts` and move the initialization logic there:
 
 ```ts
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Tag, gen, tryPromise } from "effect/Effect";
 import pg from "pg";
-import * as schema from "../db/schema";
+import * as schema from "./schema";
 import { Layer } from "effect";
 
 const DB_URL =
@@ -340,7 +340,8 @@ Then remove it from `index.ts`, and add `Db` to the context:
 import { Layer, ManagedRuntime } from "effect";
 import express, { json } from "express";
 import { ExcelRouter, MatrixRouter, TaskRouter } from "./router";
-import { Db, UUIDProvider } from "./service";
+import { UUIDProvider } from "./service";
+import { Db } from "./db/Db";
 
 const PORT = 3333;
 
@@ -365,7 +366,8 @@ Now we can change `sync` to `gen` in our repository implementation:
 
 ```ts
 import { gen } from "effect/Effect";
-import { Db, MatrixRepository } from "../../service";
+import { MatrixRepository } from "../../service";
+import { Db } from "../Db";
 
 export const make = gen(function* () {
     const db = yield* Db;
@@ -391,8 +393,9 @@ With these in place now we can create an actual implementation:
 import { eq } from "drizzle-orm";
 import { fail, gen, tryPromise } from "effect/Effect";
 import { Matrix, Task } from "../../domain";
-import { Db, MatrixRepository, UUIDProvider } from "../../service";
+import { MatrixRepository, UUIDProvider } from "../../service";
 import { matrices } from "../schema";
+import { Db } from "../Db";
 
 const DatabaseError = "DatabaseError" as const;
 const EntityNotFound = "EntityNotFound" as const;
@@ -451,27 +454,34 @@ export const make = gen(function* () {
                     return yield* fail(EntityNotFound);
                 }
             }),
-        findAll: () => tryPromise({
-                    try: () =>
-                        db.query.matrices.findMany({
-                            columns: {
-                                id: true,
-                                name: true,
-                            },
-                        }),
-                    catch: () => DatabaseError,
-                }),
+        findAll: () =>
+            tryPromise({
+                try: () =>
+                    db.query.matrices.findMany({
+                        columns: {
+                            id: true,
+                            name: true,
+                        },
+                    }),
+                catch: () => DatabaseError,
+            }),
     });
 });
 ```
 
-Ask them when did they start to feel the pain?
+> Ask them when did they start to feel the pain?
 
 ## Introducing `Data`
 
 > Here we can refactor our domain objects to use `Data.Class`:
 
+In Task.ts:
+
 ```ts
+import { Data } from "effect";
+import type { Importance } from "./Importance";
+import type { Urgency } from "./Urgency";
+
 export class Task extends Data.Class<{
     id: string;
     name: string;
@@ -490,6 +500,15 @@ export type UnsavedTask = Pick<
 };
 
 export type TaskUpdate = Pick<Task, "completed">;
+```
+
+In Matrix.ts:
+
+```ts
+import { Data } from "effect";
+import type { Importance } from "./Importance";
+import type { Task } from "./Task";
+import type { Urgency } from "./Urgency";
 
 export class Matrix extends Data.Class<{
     id: string;
@@ -554,16 +573,17 @@ export const make = gen(function* () {
                     return yield* fail(EntityNotFound);
                 }
             }),
-        findAll: () => tryPromise({
-                    try: () =>
-                        db.query.matrices.findMany({
-                            columns: {
-                                id: true,
-                                name: true,
-                            },
-                        }),
-                    catch: () => DatabaseError,
-                }),
+        findAll: () =>
+            tryPromise({
+                try: () =>
+                    db.query.matrices.findMany({
+                        columns: {
+                            id: true,
+                            name: true,
+                        },
+                    }),
+                catch: () => DatabaseError,
+            }),
     });
 });
 ```
@@ -638,16 +658,17 @@ export const make = gen(function* () {
                     return yield* fail(EntityNotFound);
                 }
             }),
-        findAll: () => tryPromise({
-                    try: () =>
-                        db.query.matrices.findMany({
-                            columns: {
-                                id: true,
-                                name: true,
-                            },
-                        }),
-                    catch: () => DatabaseError,
-                }),
+        findAll: () =>
+            tryPromise({
+                try: () =>
+                    db.query.matrices.findMany({
+                        columns: {
+                            id: true,
+                            name: true,
+                        },
+                    }),
+                catch: () => DatabaseError,
+            }),
     });
 });
 ```
@@ -698,13 +719,15 @@ export const make = gen(function* () {
                     return yield* fail(EntityNotFound);
                 }
             }),
-        findAll: () => query(() =>
-                    db.query.matrices.findMany({
-                        with: {
-                            tasks: true,
-                        },
-                    })
-                ),
+        findAll: () =>
+            query(() =>
+                db.query.matrices.findMany({
+                    columns: {
+                        id: true,
+                        name: true,
+                    },
+                })
+            ),
     });
 });
 ```
@@ -718,10 +741,18 @@ export class DatabaseError extends TaggedError("DatabaseError")<{
     message: string;
 }> {}
 
+import { TaggedError } from "effect/Data";
+
 export class EntityNotFound extends TaggedError("EntityNotFound")<{
     entity: string;
     filter: Record<string, unknown>;
-}> {}
+}> {
+    override get message() {
+        return `Entity ${this.entity} not found with filter ${JSON.stringify(
+            this.filter
+        )}`;
+    }
+}
 ```
 
 > We can discuss Error vs TaggedError and how TaggedError helps with `catchTag` / `catchTags`
@@ -781,8 +812,7 @@ There is one last neat trick that we can do. `TaggedError`s are yieldable:
 
 ```ts
 return (
-    yield *
-    new EntityNotFound({
+    yield* new EntityNotFound({
         entity: "Matrix",
         filter: { id },
     })
@@ -802,9 +832,10 @@ Solution is:
 import { eq } from "drizzle-orm";
 import { gen } from "effect/Effect";
 import { Task } from "../../domain";
-import { Db, TaskRepository, UUIDProvider } from "../../service";
+import { TaskRepository, UUIDProvider } from "../../service";
 import { tasks } from "../schema";
 import { query } from "./util";
+import { Db } from "../Db";
 
 export const make = gen(function* () {
     const db = yield* Db;
@@ -849,9 +880,8 @@ Now we can put these repos into layers and do a barrel export:
 
 ```ts
 // in DrizzleMatrixRepository.ts
-import { Layer } from "effect";
+import { Layer, pipe } from "effect";
 import { UUIDProvider } from "../../service";
-//! Move Db next to it!
 import { Db } from "./Db";
 
 export const layer = Layer.effect(MatrixRepository, make);
@@ -867,14 +897,12 @@ export const live = pipe(
 in DrizzleTaskRepository.ts
 
 ```ts
-import { Layer } from "effect";
+import { Layer, pipe } from "effect";
 import { UUIDProvider } from "../../service";
-//! Move Db next to it!
 import { Db } from "./Db";
 
-export const layer = Layer.effect(MatrixRepository, make);
+export const layer = Layer.effect(TaskRepository, make);
 
-// This will make requirements `never`
 export const live = pipe(
     layer,
     Layer.provide(Db.live),
@@ -898,7 +926,6 @@ export const live = pipe(
 in index.ts
 
 ```ts
-export * from "./Db";
 export * as DrizzleMatrixRepository from "./DrizzleMatrixRepository";
 export * as DrizzleTaskRepository from "./DrizzleTaskRepository";
 ```
@@ -908,13 +935,10 @@ Now we can add all these to our context:
 ```ts
 import { Layer, ManagedRuntime } from "effect";
 import express, { json } from "express";
+import { Db } from "./db/Db";
 import { ExcelRouter, MatrixRouter, TaskRouter } from "./router";
 import { UUIDProvider } from "./service";
-import {
-    Db,
-    DrizzleMatrixRepository,
-    DrizzleTaskRepository,
-} from "./db/repository";
+import { DrizzleMatrixRepository, DrizzleTaskRepository } from "./db";
 
 // ...
 
@@ -936,8 +960,12 @@ First let's create a type that represents our runtime:
 
 ```ts
 import type { ManagedRuntime } from "effect/ManagedRuntime";
-import type { Db } from "./db/repository";
-import type { MatrixRepository, TaskRepository, UUIDProvider } from "./service";
+import type {
+    MatrixRepository,
+    TaskRepository,
+    UUIDProvider,
+} from "../service";
+import type { Db } from "../db";
 
 export type EisenhowerRuntime = ManagedRuntime<
     UUIDProvider | Db | MatrixRepository | TaskRepository,
@@ -1044,13 +1072,13 @@ We also need to fix our runtime type:
 
 ```ts
 import type { ManagedRuntime } from "effect/ManagedRuntime";
-import type { Db } from "../db/repository";
 import type {
     DatabaseError,
     MatrixRepository,
     TaskRepository,
     UUIDProvider,
 } from "../service";
+import type { Db } from "../db";
 
 export type EisenhowerRuntime = ManagedRuntime<
     UUIDProvider | Db | MatrixRepository | TaskRepository,
@@ -1131,5 +1159,476 @@ export const make = ({ runPromise }: EisenhowerRuntime) => {
 
 > Note that there are a few small changes, such as not having `completed` in the body of the patch request since we have a `complete` not an `update` function in the repository.
 
-
 ## Sending Notifications
+
+Now we're assuming that this is a single-user system so no authentication is necessary and we can just hard-code an email address. The point here is to have a service that executes scheduled jobs in a forked fiber.
+
+First let's take a look at the `NotificationService`:
+
+```ts
+import { Tag, type Effect } from "effect/Effect";
+import type { TaskRepository } from "./TaskRepository";
+import type { EmailSender } from "./EmailSender";
+
+export class NotificationService extends Tag("Service/NotificationService")<
+    NotificationService,
+    {
+        start: () => Effect<void, never, TaskRepository | EmailSender>;
+    }
+>() {}
+```
+
+> Why isn't there a stop function? Structured concurrency explains this.
+
+> Also note the difference between the repository functions and this. We have requirements in
+> the `start` function, and not in the `gen` that we used in the repositories.
+
+Now let's add a new function to `TaskRepository`:
+
+```ts
+import { Tag, type Effect } from "effect/Effect";
+import type { Task, UnsavedTask } from "../domain";
+import type { DatabaseError, EntityNotFound } from "./error";
+
+export class TaskRepository extends Tag("Service/TaskRepository")<
+    TaskRepository,
+    {
+        findExpired: () => Effect<Task[], DatabaseError>;
+        create: (task: UnsavedTask) => Effect<Task, DatabaseError>;
+        complete: (id: string) => Effect<Task, EntityNotFound | DatabaseError>;
+        delete: (id: string) => Effect<Task, EntityNotFound | DatabaseError>;
+    }
+>() {}
+```
+
+The implementation is straightforward (note the use of `pipe` and `map` instead of `gen`):
+
+```ts
+import { and, eq, gte } from "drizzle-orm";
+
+// ...
+
+findExpired: () =>
+    pipe(
+        query(() =>
+            db.query.tasks.findMany({
+                where: and(
+                    eq(tasks.completed, false),
+                    gte(tasks.dueDate, new Date())
+                ),
+            })
+        ),
+        map((tasks) => tasks.map(Task.fromRaw))
+    ),
+```
+
+this can be further simplified by using `Array`:
+
+```ts
+import { and, eq, gte } from "drizzle-orm";
+
+// ...
+import { Layer, pipe, Array } from "effect";
+
+// ...
+
+findExpired: () =>
+    pipe(
+        query(() =>
+            db.query.tasks.findMany({
+                where: and(
+                    eq(tasks.completed, false),
+                    gte(tasks.dueDate, new Date())
+                ),
+            })
+        ),
+        map(Array.map(Task.fromRaw))
+    ),
+```
+
+Now we can get the tasks that are expired and send an email. First let's write a function that we'll keep repeating:
+
+```ts
+import { Array, Layer, Schedule, pipe } from "effect";
+import type { Effect } from "effect/Effect";
+import {
+    Tag,
+    all,
+    asVoid,
+    fork,
+    map,
+    repeat,
+    suspend,
+    sync,
+} from "effect/Effect";
+import { EmailSender } from "./EmailSender";
+import { TaskRepository } from "./TaskRepository";
+
+const EMAIL = "your@email.com";
+
+const sendEmails = gen(function* () {
+    const tasks = yield* TaskRepository.findExpired();
+    for (const task of tasks) {
+        yield* EmailSender.sendEmail({
+            address: EMAIL,
+            content: `Task ${task.id} has expired`,
+        });
+    }
+});
+```
+
+Now the service becomes:
+
+```ts
+export class NotificationService extends Tag("Service/NotificationService")<
+    NotificationService,
+    {
+        start: () => Effect<void, never, TaskRepository | EmailSender>;
+    }
+>() {
+    static make = sync(() =>
+        NotificationService.of({
+            start: () =>
+                pipe(sendEmails, repeat(Schedule.fixed(500)), fork),
+        })
+    );
+
+    static layer = Layer.effect(NotificationService, NotificationService.make);
+}
+```
+
+EmailSender is very simple:
+
+```ts
+import { Layer } from "effect";
+import { Tag, succeed, sync, type Effect } from "effect/Effect";
+
+type Email = {
+    address: string;
+    content: string;
+};
+
+export class EmailSender extends Tag("Service/EmailSender")<
+    EmailSender,
+    {
+        sendEmail: (email: Email) => Effect<void>;
+    }
+>() {
+    static make = sync(() =>
+        EmailSender.of({
+            sendEmail: (email) => {
+                console.log(`Sending email to ${email.address}`);
+                return succeed(undefined);
+            },
+        })
+    );
+
+    static layer = Layer.effect(EmailSender, EmailSender.make);
+
+    static live = EmailSender.layer;
+}
+```
+
+Now we can add this to our main app:
+
+```ts
+const NotificationServiceLive = pipe(
+    NotificationService.layer,
+    Layer.provide(EmailSender.live),
+    Layer.provide(DrizzleTaskRepository.live)
+);
+
+const CONTEXT = Layer.mergeAll(
+    UUIDProvider.live,
+    Db.live,
+    DrizzleMatrixRepository.live,
+    DrizzleTaskRepository.live,
+    EmailSender.live,
+    NotificationServiceLive
+);
+// ...
+
+const start = async () => {
+    RUNTIME.runPromise(NotificationService.start());
+    // ...
+};
+```
+
+Now start the app and ask them why this doesn't work!
+
+> They can add a `tap(() => logInfo("Sending emails..."))` to see what's happening
+
+So the first problem is that `runPromise` terminates the fiber, we need to use `runFork` instead:
+
+```ts
+RUNTIME.runFork(NotificationService.start());
+```
+
+But when we remove the `fork` we'll have a `number` as a return value (this is returned by `Schedule.fixed`) so we need to use `asVoid`:
+
+```ts
+pipe(sendEmails, repeat(Schedule.fixed(500)), asVoid);
+```
+
+and in order to make this work we'll need to handle the error:
+
+```ts
+const sendEmails = gen(function* () {
+    yield* logInfo("Checking for expired tasks...");
+    const tasks = yield* either(TaskRepository.findExpired());
+    if (isLeft(tasks)) {
+        yield* logError(`Couldn't query expired tasks: ${tasks.left.message}`);
+    } else {
+        for (const { id, name } of tasks.right) {
+            yield* EmailSender.sendEmail({
+                address: EMAIL,
+                content: `Task ${name} (${id}) has expired`,
+            });
+        }
+    }
+});
+```
+
+Now it should work!
+
+> They'll probably have questions about this, so it is a good idea to discuss it.
+
+Now there is a problem. We can't gracefully terminate our app because we don't handle the long-running fiber as a resource. We also have another problem which is an anti-pattern:
+
+```ts
+export class NotificationService extends Tag("Service/NotificationService")<
+    NotificationService,
+    {
+        start: () => Effect<void, never, TaskRepository | EmailSender>;
+    }
+>() {}
+```
+
+The requirements are listed on `start` and not in the `gen` function that creates this service. This leads to a dependency explosion, so we should refactor the `NotificationService`. And while we're at it we can also separate the concerns (scheduling and notifying)
+
+```ts
+export class NotificationService extends Tag("Service/NotificationService")<
+    NotificationService,
+    {
+        notify: () => Effect<void>;
+    }
+>() {
+    static make = gen(function* () {
+        const emailSender = yield* EmailSender;
+        const taskRepository = yield* TaskRepository;
+        return NotificationService.of({
+            notify: () =>
+                gen(function* () {
+                    yield* logInfo("Checking for expired tasks...");
+                    const tasks = yield* either(taskRepository.findExpired());
+                    if (isLeft(tasks)) {
+                        yield* logError(
+                            `Couldn't query expired tasks: ${tasks.left.message}`
+                        );
+                    } else {
+                        for (const { id, name } of tasks.right) {
+                            yield* emailSender.sendEmail({
+                                address: EMAIL,
+                                content: `Task ${name} (${id}) has expired`,
+                            });
+                        }
+                    }
+                }),
+        });
+    });
+
+    static layer = Layer.effect(NotificationService, NotificationService.make);
+}
+```
+
+then in our index we can add the scheduling as a separate layer that's handled as a resource:
+
+```ts
+const NotificationServiceLive = pipe(
+    NotificationService.layer,
+    Layer.provide(EmailSender.live),
+    Layer.provide(DrizzleTaskRepository.live)
+);
+
+export const ScheduleSendEmailsLive = pipe(
+    Layer.scopedDiscard(
+        forkScoped(repeat(NotificationService.notify(), Schedule.fixed(500)))
+    ),
+    Layer.provide(NotificationServiceLive)
+);
+
+const CONTEXT = Layer.mergeAll(
+    UUIDProvider.live,
+    Db.live,
+    DrizzleMatrixRepository.live,
+    DrizzleTaskRepository.live,
+    EmailSender.live,
+    NotificationServiceLive,
+    ScheduleSendEmailsLive
+);
+```
+
+There is one last problem. The runtime doesn't start until we "touch" it:
+
+```ts
+await RUNTIME.runtime();
+```
+
+Now what we're at it, stopping a runtime is also crucial if we don't want to leak socket connections and such when the app is terminated:
+
+```ts
+process.once("SIGTERM", async () => {
+    await RUNTIME.dispose();
+});
+```
+
+## Excel Export
+
+> Not really an excel, bu csv, but what the hell.
+
+Let's open `ExcelExporter`. It should be clear by now what needs to be done: we need to use the `MatrixRepository`, and a `File` handle as a resource. Implementation should be straightforward let them try to implement it on their own. A few pointers:
+
+-   They need to fiddle around with the errors because `DatabaseError` and `EntityNotFound` needs to be mapped to `MatrixExportFailed`
+
+The solution:
+
+```ts
+import { Layer, pipe } from "effect";
+import {
+    Tag,
+    acquireUseRelease,
+    gen,
+    mapError,
+    promise,
+    tryPromise,
+    type Effect,
+} from "effect/Effect";
+import fs from "fs/promises";
+import { MatrixRepository } from "./MatrixRepository";
+import { MatrixExportFailed } from "./error";
+
+export class ExcelExporter extends Tag("Service/ExcelExporter")<
+    ExcelExporter,
+    {
+        export: (
+            matrixId: string,
+            path: string
+        ) => Effect<void, MatrixExportFailed>;
+    }
+>() {
+    static make = gen(function* () {
+        const matrixRepository = yield* MatrixRepository;
+
+        return ExcelExporter.of({
+            export: (matrixId, path) =>
+                gen(function* () {
+                    const matrix = yield* pipe(
+                        matrixRepository.findById(matrixId),
+                        mapError(
+                            ({ message }) =>
+                                new MatrixExportFailed({
+                                    message,
+                                })
+                        )
+                    );
+
+                    const data = matrix.tasks
+                        .map(
+                            ({
+                                id,
+                                name,
+                                completed,
+                                dueDate,
+                                importance,
+                                urgency,
+                            }) => {
+                                return `${id},${name},${completed},${dueDate.toISOString()},${importance},${urgency}`;
+                            }
+                        )
+                        .join("\n");
+
+                    const acquire = tryPromise({
+                        try: () => fs.open(path, "w"),
+                        catch: (e) =>
+                            new MatrixExportFailed({
+                                message:
+                                    e instanceof Error
+                                        ? e.message
+                                        : "Unknown error",
+                            }),
+                    });
+
+                    const use = (file: fs.FileHandle) =>
+                        promise(() => file.write(data));
+
+                    const release = (file: fs.FileHandle) =>
+                        promise(() => file.close());
+
+                    yield* acquireUseRelease(acquire, use, release);
+                }),
+        });
+    });
+
+    static layer = Layer.effect(ExcelExporter, ExcelExporter.make);
+}
+```
+
+adding this to our context should be a breeze:
+
+```ts
+const ExcelExporterLive = pipe(
+    ExcelExporter.layer,
+    Layer.provide(DrizzleMatrixRepository.live)
+);
+
+const CONTEXT = Layer.mergeAll(
+    UUIDProvider.live,
+    Db.live,
+    DrizzleMatrixRepository.live,
+    DrizzleTaskRepository.live,
+    EmailSender.live,
+    NotificationServiceLive,
+    ScheduleSendEmailsLive,
+    ExcelExporterLive
+);
+```
+
+Then all we need to do is to use this in `ExcelRouter`:
+
+```ts
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+import { either } from "effect/Effect";
+import { isRight } from "effect/Either";
+import { Router } from "express";
+import { ExcelExporter } from "../service";
+import type { EisenhowerRuntime } from "../types";
+
+export const make = (runtime: EisenhowerRuntime) => {
+    const router = Router();
+
+    router.get(`/`, async (req, res) => {
+        const { matrixId, path } = req.query;
+        const result = await runtime.runPromise(
+            either(ExcelExporter.export(matrixId!.toString(), path!.toString()))
+        );
+        if (isRight(result)) {
+            res.status(200);
+            res.json({
+                matrixId,
+                path,
+            });
+        } else {
+            res.status(500);
+            res.json({
+                error: result.left.message,
+            });
+        }
+    });
+
+    return router;
+};
+```
+
+There should be an error here because we forgot to update the runtime type. Maybe someone noticed or figured it out!
+
+> Note that doing proper deserialization / validation is not the goal of this exercise.

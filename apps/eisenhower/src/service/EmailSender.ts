@@ -8,6 +8,6 @@ type Email = {
 export class EmailSender extends Tag("Service/EmailSender")<
     EmailSender,
     {
-        sendEmail: (email: Email) => Effect<Buffer>;
+        sendEmail: (email: Email) => Effect<void>;
     }
 >() {}

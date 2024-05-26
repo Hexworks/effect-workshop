@@ -5162,25 +5162,26 @@ We mentioned this a while ago.
 
 # Best Practices
 
-
-
-
-
-
-
-
-
+<ul>
+  <li v-click>Don't run effects in effects</li>
+  <li v-click>Function composition enables tree shaking</li>
+  <li v-click>Use `Effect` everywhere where it makes sense (don't use Either / Option if it is not necessary)</li>
+  <li v-click>Either / Option makes sense when interoping with non-effect code</li>
+  <li v-click>Effect is lazy, Option and Either are eager</li>
+  <li v-click>Effect.* functions accept Option / Either as parameters</li>
+  <li v-click>Don't block the executor (no while(true))</li>
+  <li v-click>Whenever something is not clear check the type signatures</li>
+  <li v-click>If it doesn't have a parameter don't make it a function (Effects are blueprints)</li>
+  <li v-click>Use ManagedRuntime if you are not fully integrated with Effect</li>
+  <li v-click>...</li>
+</ul>
 
 
 
 ---
 ---
 
-# Other Topics
-
-> Other features of Effect
-
-**TODO**
+# Other Features of Effect
 
 <ul>
   <li v-click>Traits: Equal & Hash</li>
@@ -5191,5 +5192,10 @@ We mentioned this a while ago.
   <li v-click>Creating a Context manually</li>
   <li v-click>Using Deferred</li>
   <li v-click>Schema</li>
-  
+  <li v-click>...</li>
 </ul>
+
+---
+---
+
+# Now Let's Write A Program In Effect!

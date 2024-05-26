@@ -1,0 +1,15 @@
+{
+    "autorun": true,
+    "autokill": true,
+    "terminals": [
+        {
+            "name": "Docker",
+            "description": "Starts docker compose on startup",
+            "icon": "container",
+            "open": false,
+            "recycle": false,
+            "color": "terminal.ansiCyan",
+            "commands": ["docker-compose up -d", "exit"]
+        }
+    ]
+}
